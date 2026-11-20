@@ -10,13 +10,24 @@
 //   render.dibujarPantalla(p);
 //   render.refrescar();
 #pragma once
-#include "Tipos.h"
+#include "EstadoJuego.h"
 #include <cstdio>
 #include <cstring>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 class Renderizado {
 public:
     Renderizado(EstadoJuego& e) : estado(e) {
+#ifdef _WIN32
+        // en Windows hay que activar los codigos \033[ de la consola
+        HANDLE consola = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD modo = 0;
+        GetConsoleMode(consola, &modo);
+        SetConsoleMode(consola, modo | 0x0004);   // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#endif
         printf("\033[?25l");    // esconder el cursor
         printf("\033[2J");      // limpiar la pantalla
         fflush(stdout);
@@ -84,8 +95,8 @@ public:
 
     void dibujarInterfaz() {
         char linea[ANCHO_PANTALLA + 1];
-        sprintf(linea, "PUNTAJE %05d   MAXIMO %05d   VIDAS %d   NIVEL %d",
-                estado.puntaje, estado.puntajeMax, estado.nave.vidas, estado.nivel);
+        snprintf(linea, sizeof(linea), "PUNTAJE %05d   MAXIMO %05d   VIDAS %d   NIVEL %d",
+                estado.datos.puntaje, estado.datos.puntajeMax, estado.nave.vidas, estado.datos.nivel);
         escribirTexto(FILA_HUD, 1, linea);
     }
 
@@ -116,17 +127,17 @@ public:
         else if (p == Pantalla::GAME_OVER) {
             prepararCuadro();
             escribirCentrado(8, "G A M E   O V E R");
-            sprintf(texto, "Puntaje final: %d", estado.puntaje);
+            snprintf(texto, sizeof(texto), "Puntaje final: %d", estado.datos.puntaje);
             escribirCentrado(11, texto);
-            sprintf(texto, "Puntaje maximo: %d", estado.puntajeMax);
+            snprintf(texto, sizeof(texto), "Puntaje maximo: %d", estado.datos.puntajeMax);
             escribirCentrado(12, texto);
             escribirCentrado(16, "[ENTER] Volver al menu");
         }
         else if (p == Pantalla::NIVEL_COMPLETADO) {
             prepararCuadro();
-            sprintf(texto, "NIVEL %d COMPLETADO", estado.nivel);
+            snprintf(texto, sizeof(texto), "NIVEL %d COMPLETADO", estado.datos.nivel);
             escribirCentrado(9, texto);
-            sprintf(texto, "Puntaje: %d", estado.puntaje);
+            snprintf(texto, sizeof(texto), "Puntaje: %d", estado.datos.puntaje);
             escribirCentrado(12, texto);
             escribirCentrado(16, "[ENTER] Siguiente nivel");
         }

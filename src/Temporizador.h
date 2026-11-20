@@ -1,8 +1,10 @@
 // Temporizador.h - Persona 2
 // Controla la velocidad del juego (FPS) y devuelve cuanto tardo cada cuadro.
+// Usa solo C++ estandar (chrono y thread), asi funciona en Windows y en Linux.
 #pragma once
 #include "Util.h"
-#include <time.h>
+#include <chrono>
+#include <thread>
 
 class Temporizador {
 public:
@@ -12,15 +14,12 @@ public:
 
     // espera lo que falte y devuelve los ms que pasaron
     int calcularDt() {
-        long ahora = ahoraMs();
-        long dt = ahora - ultimoTiempo;
+        long long ahora = ahoraMs();
+        long long dt = ahora - ultimoTiempo;
 
         // si el cuadro fue muy rapido, esperamos lo que falta
         if (dt < DURACION_CUADRO_MS) {
-            struct timespec espera;
-            espera.tv_sec = 0;
-            espera.tv_nsec = (DURACION_CUADRO_MS - dt) * 1000000;
-            nanosleep(&espera, NULL);
+            std::this_thread::sleep_for(std::chrono::milliseconds(DURACION_CUADRO_MS - dt));
             ahora = ahoraMs();
             dt = ahora - ultimoTiempo;
         }
@@ -35,11 +34,11 @@ public:
     }
 
 private:
-    long ultimoTiempo;
+    long long ultimoTiempo;
 
-    long ahoraMs() {
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    // milisegundos desde que arranco el reloj
+    long long ahoraMs() {
+        auto ahora = std::chrono::steady_clock::now().time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(ahora).count();
     }
 };
