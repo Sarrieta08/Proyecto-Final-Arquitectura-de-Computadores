@@ -22,6 +22,15 @@
 #define C_GAME_OVER      11  // rojo
 #define C_NIVEL          12  // verde
 #define C_CAJA           13  // cyan
+#define C_TEXTO_SUAVE    14  // azul
+
+// Pares para el pixel art: el FONDO es el color del pixel
+#define P_VERDE          20
+#define P_CYAN           21
+#define P_MAGENTA        22
+#define P_BLANCO         23
+#define P_ROJO           24
+#define P_AMARILLO       25
 
 class Renderizado {
 public:
@@ -34,6 +43,7 @@ public:
         nodelay(stdscr, TRUE);  // getch() no se queda esperando (devuelve ERR)
         iniciarColores();
         prepararCuadro();
+        contadorMenu = 0;
     }
 
     ~Renderizado() {
@@ -121,16 +131,38 @@ public:
         }
         else if (p == Pantalla::MENU) {
             prepararCuadro();
-            escribirCentrado(3, "S P A C E   I N V A D E R S", C_TITULO);
-            escribirCentrado(7, "TABLA DE PUNTOS", C_HUD);
-            escribirTexto(9, 30, SPRITE_ALIEN_FILA_0, C_ALIEN_FILA_0);
-            escribirTexto(9, 36, "= 30 PUNTOS", C_HUD);
-            escribirTexto(11, 30, SPRITE_ALIEN_FILA_1_2, C_ALIEN_FILA_1_2);
-            escribirTexto(11, 36, "= 20 PUNTOS", C_HUD);
-            escribirTexto(13, 30, SPRITE_ALIEN_FILA_3_4, C_ALIEN_FILA_3_4);
-            escribirTexto(13, 36, "= 10 PUNTOS", C_HUD);
-            escribirCentrado(17, "[ENTER] Jugar     [Q] Salir", C_NAVE);
-            escribirCentrado(20, "Mover: flechas o A D   Disparar: ESPACIO   Pausa: P", C_NORMAL);
+            contadorMenu++;
+
+            // titulo
+            escribirCentrado(1, "=====  S P A C E   I N V A D E R S  =====", C_TITULO);
+
+            // alien grande a la izquierda (mueve las patas cada medio segundo)
+            if ((contadorMenu / 15) % 2 == 0) {
+                dibujarPixelArt(4, 8, ALIEN_GRANDE_1, 8);
+            } else {
+                dibujarPixelArt(4, 8, ALIEN_GRANDE_2, 8);
+            }
+
+            // nave grande a la derecha
+            dibujarPixelArt(3, 46, NAVE_GRANDE, 9);
+
+            // tabla de puntos
+            escribirCentrado(13, "TABLA DE PUNTOS", C_HUD);
+            escribirTexto(14, 31, SPRITE_ALIEN_FILA_0, C_ALIEN_FILA_0);
+            escribirTexto(14, 37, "= 30 PUNTOS", C_HUD);
+            escribirTexto(15, 31, SPRITE_ALIEN_FILA_1_2, C_ALIEN_FILA_1_2);
+            escribirTexto(15, 37, "= 20 PUNTOS", C_HUD);
+            escribirTexto(16, 31, SPRITE_ALIEN_FILA_3_4, C_ALIEN_FILA_3_4);
+            escribirTexto(16, 37, "= 10 PUNTOS", C_HUD);
+
+            // el texto de ENTER parpadea
+            if ((contadorMenu / 20) % 2 == 0) {
+                escribirCentrado(18, ">>  [ENTER] JUGAR  <<", C_NAVE);
+            }
+            escribirCentrado(19, "[Q] Salir", C_NORMAL);
+
+            escribirCentrado(21, "Mover: flechas o A D   Disparar: ESPACIO   Pausa: P", C_TEXTO_SUAVE);
+            escribirCentrado(23, "Grupo 2 - IC-3101 Arquitectura de Computadores", C_TEXTO_SUAVE);
         }
         else if (p == Pantalla::PAUSA) {
             dibujarCaja(9, 25, 5, 30, C_CAJA);
@@ -177,7 +209,70 @@ private:
     char cuadro[ALTO_PANTALLA][ANCHO_PANTALLA];     // que caracter va en cada celda
     short colores[ALTO_PANTALLA][ANCHO_PANTALLA];   // que par de color usa cada celda
     bool hayColor;
+    int contadorMenu;           // cuenta los cuadros del menu, para animarlo
     EstadoJuego& estado;
+
+    // ---------------- Pixel art del menu ----------------
+    // Cada letra es un pixel:  . = vacio   G = verde   C = cyan   M = magenta
+    //                          W = blanco  R = rojo    Y = amarillo
+    // Cada pixel se dibuja con 2 espacios de fondo de color (para que se vea cuadrado).
+
+    const char* NAVE_GRANDE[9] = {
+        "......W......",
+        ".....GWG.....",
+        ".....GCG.....",
+        "....GGCGG....",
+        ".G..GGGGG..G.",
+        ".G.GGGGGGG.G.",
+        "GGGGGGGGGGGGG",
+        "GG.GG...GG.GG",
+        ".R..Y...Y..R.",
+    };
+
+    const char* ALIEN_GRANDE_1[8] = {
+        "..M.....M..",
+        "...M...M...",
+        "..MMMMMMM..",
+        ".MM.MMM.MM.",
+        "MMMMMMMMMMM",
+        "M.MMMMMMM.M",
+        "M.M.....M.M",
+        "...MM.MM...",
+    };
+
+    const char* ALIEN_GRANDE_2[8] = {
+        "..M.....M..",
+        "M..M...M..M",
+        "M.MMMMMMM.M",
+        "MMM.MMM.MMM",
+        "MMMMMMMMMMM",
+        ".MMMMMMMMM.",
+        "..M.....M..",
+        ".M.......M.",
+    };
+
+    // dibuja un dibujo de pixel art empezando en (fila, col)
+    void dibujarPixelArt(int fila, int col, const char* dibujo[], int filas) {
+        for (int r = 0; r < filas; r++) {
+            for (int c = 0; dibujo[r][c] != '\0'; c++) {
+                char letra = dibujo[r][c];
+                short color = C_NORMAL;
+                if (letra == 'G') color = P_VERDE;
+                else if (letra == 'C') color = P_CYAN;
+                else if (letra == 'M') color = P_MAGENTA;
+                else if (letra == 'W') color = P_BLANCO;
+                else if (letra == 'R') color = P_ROJO;
+                else if (letra == 'Y') color = P_AMARILLO;
+
+                if (color != C_NORMAL) {
+                    // con color el pixel es un espacio con fondo; sin color se usa #
+                    char ch = hayColor ? ' ' : '#';
+                    ponerChar(fila + r, col + c * 2, ch, color);
+                    ponerChar(fila + r, col + c * 2 + 1, ch, color);
+                }
+            }
+        }
+    }
 
     void iniciarColores() {
         hayColor = has_colors();
@@ -197,6 +292,15 @@ private:
         init_pair(C_GAME_OVER,      COLOR_RED,     COLOR_BLACK);
         init_pair(C_NIVEL,          COLOR_GREEN,   COLOR_BLACK);
         init_pair(C_CAJA,           COLOR_CYAN,    COLOR_BLACK);
+        init_pair(C_TEXTO_SUAVE,    COLOR_BLUE,    COLOR_BLACK);
+
+        // pixeles: letra negra sobre fondo de color
+        init_pair(P_VERDE,    COLOR_BLACK, COLOR_GREEN);
+        init_pair(P_CYAN,     COLOR_BLACK, COLOR_CYAN);
+        init_pair(P_MAGENTA,  COLOR_BLACK, COLOR_MAGENTA);
+        init_pair(P_BLANCO,   COLOR_BLACK, COLOR_WHITE);
+        init_pair(P_ROJO,     COLOR_BLACK, COLOR_RED);
+        init_pair(P_AMARILLO, COLOR_BLACK, COLOR_YELLOW);
     }
 
     // pone un caracter en el cuadro (si se sale de la pantalla no hace nada)
