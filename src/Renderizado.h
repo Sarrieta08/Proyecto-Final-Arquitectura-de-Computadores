@@ -24,6 +24,9 @@
 #define C_CAJA           13  // cyan
 #define C_TEXTO_SUAVE    14  // azul
 
+// Cuadros que dura el mensaje grande de vidas (45 cuadros = 1.5 segundos)
+#define CUADROS_MENSAJE_VIDA 45
+
 // Pares para el pixel art: el FONDO es el color del pixel
 #define P_VERDE          20
 #define P_CYAN           21
@@ -44,6 +47,8 @@ public:
         iniciarColores();
         prepararCuadro();
         contadorMenu = 0;
+        ultimasVidas = estado.nave.vidas;
+        cuadrosMensaje = 0;
     }
 
     ~Renderizado() {
@@ -115,12 +120,52 @@ public:
         escribirTexto(estado.nave.fila, estado.nave.columna, SPRITE_NAVE, C_NAVE);
     }
 
+    // true mientras se muestra el mensaje grande de vidas (Juego detiene la partida)
+    bool hayMensaje() {
+        return cuadrosMensaje > 0;
+    }
+
     void dibujarInterfaz() {
-        char linea[ANCHO_PANTALLA + 1];
-        snprintf(linea, sizeof(linea), "PUNTAJE %05d   MAXIMO %05d   VIDAS %d   NIVEL %d",
-                 estado.datos.puntaje, estado.datos.puntajeMax,
-                 estado.nave.vidas, estado.datos.nivel);
-        escribirTexto(FILA_HUD, 1, linea, C_HUD);
+        // si la nave perdio una vida, se activa el mensaje grande
+        if (estado.nave.vidas < ultimasVidas && estado.nave.vidas > 0) {
+            cuadrosMensaje = CUADROS_MENSAJE_VIDA;
+        }
+        ultimasVidas = estado.nave.vidas;
+
+        char numero[16];
+
+        // fila 0: puntos, maximo, nivel y vidas
+        escribirTexto(FILA_HUD, 1, "PUNTOS", C_CAJA);
+        snprintf(numero, sizeof(numero), "%05d", estado.datos.puntaje);
+        escribirTexto(FILA_HUD, 8, numero, C_HUD);
+
+        escribirTexto(FILA_HUD, 19, "MAXIMO", C_CAJA);
+        snprintf(numero, sizeof(numero), "%05d", estado.datos.puntajeMax);
+        escribirTexto(FILA_HUD, 26, numero, C_TITULO);
+
+        escribirTexto(FILA_HUD, 38, "NIVEL", C_CAJA);
+        snprintf(numero, sizeof(numero), "%d", estado.datos.nivel);
+        escribirTexto(FILA_HUD, 44, numero, C_HUD);
+
+        // las vidas se dibujan como naves pequenas
+        escribirTexto(FILA_HUD, 54, "VIDAS", C_CAJA);
+        for (int v = 0; v < estado.nave.vidas; v++) {
+            escribirTexto(FILA_HUD, 60 + v * 5, "/^\\", C_NAVE);
+        }
+
+        // fila 1: linea que separa la informacion del juego
+        // (solo donde no hay nada, para no tapar una bala)
+        for (int c = 0; c < ANCHO_PANTALLA; c++) {
+            if (cuadro[1][c] == SIMBOLO_VACIO) {
+                ponerChar(1, c, '-', C_TEXTO_SUAVE);
+            }
+        }
+
+        // mensaje grande cuando le disparan a la nave
+        if (cuadrosMensaje > 0) {
+            dibujarMensajeVida();
+            cuadrosMensaje--;
+        }
     }
 
     void dibujarPantalla(Pantalla p) {
@@ -210,6 +255,8 @@ private:
     short colores[ALTO_PANTALLA][ANCHO_PANTALLA];   // que par de color usa cada celda
     bool hayColor;
     int contadorMenu;           // cuenta los cuadros del menu, para animarlo
+    int ultimasVidas;           // vidas del cuadro anterior, para saber si le dispararon
+    int cuadrosMensaje;         // cuadros que le quedan al mensaje grande de vidas
     EstadoJuego& estado;
 
     // ---------------- Pixel art del menu ----------------
@@ -250,6 +297,49 @@ private:
         "..M.....M..",
         ".M.......M.",
     };
+
+    // Numeros grandes de 3 x 5 pixeles para el mensaje de vidas
+    const char* DIGITOS[10][5] = {
+        {"RRR", "R.R", "R.R", "R.R", "RRR"},   // 0
+        {".R.", "RR.", ".R.", ".R.", "RRR"},   // 1
+        {"RRR", "..R", "RRR", "R..", "RRR"},   // 2
+        {"RRR", "..R", "RRR", "..R", "RRR"},   // 3
+        {"R.R", "R.R", "RRR", "..R", "..R"},   // 4
+        {"RRR", "R..", "RRR", "..R", "RRR"},   // 5
+        {"RRR", "R..", "RRR", "R.R", "RRR"},   // 6
+        {"RRR", "..R", "..R", "..R", "..R"},   // 7
+        {"RRR", "R.R", "RRR", "R.R", "RRR"},   // 8
+        {"RRR", "R.R", "RRR", "..R", "RRR"},   // 9
+    };
+
+    // Nave mediana para el mensaje de vidas
+    const char* NAVE_MEDIANA[5] = {
+        "...W...",
+        "..GCG..",
+        ".GGGGG.",
+        "GGGGGGG",
+        "G.G.G.G",
+    };
+
+    // Recuadro con "TE DIERON", una nave y el numero de vidas en grande
+    void dibujarMensajeVida() {
+        dibujarCaja(5, 20, 14, 40, C_GAME_OVER);
+
+        escribirCentrado(7, "!!  TE DIERON  !!", C_GAME_OVER);
+
+        // nave mediana, una x y el numero grande
+        dibujarPixelArt(10, 25, NAVE_MEDIANA, 5);
+        escribirTexto(12, 42, "x", C_HUD);
+        int vidas = estado.nave.vidas;
+        if (vidas > 9) vidas = 9;
+        dibujarPixelArt(10, 47, DIGITOS[vidas], 5);
+
+        if (estado.nave.vidas == 1) {
+            escribirCentrado(16, "ULTIMA VIDA, CUIDADO", C_TITULO);
+        } else {
+            escribirCentrado(16, "VIDAS RESTANTES", C_HUD);
+        }
+    }
 
     // dibuja un dibujo de pixel art empezando en (fila, col)
     void dibujarPixelArt(int fila, int col, const char* dibujo[], int filas) {

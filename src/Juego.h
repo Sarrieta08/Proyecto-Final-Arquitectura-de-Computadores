@@ -33,7 +33,8 @@ public:
             Pantalla anterior = pantallas.getPantalla();
             Evento evento = Evento::NINGUNO;
 
-            if (anterior == Pantalla::JUEGO && accion != Accion::PAUSA) {
+            // mientras se muestra el mensaje de vidas la partida queda quieta
+            if (anterior == Pantalla::JUEGO && accion != Accion::PAUSA && !render.hayMensaje()) {
                 evento = logica.actualizar(accion, dt);
             }
 
