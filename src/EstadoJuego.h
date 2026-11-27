@@ -64,6 +64,10 @@ public:
         int puntajeAnterior = datos.puntaje;
         int puntajeMaxAnterior = datos.puntajeMax;
         int vidasAnteriores = nave.vidas;
+        
+        if (nuevoNivel > 1 && vidasAnteriores < VIDAS_INICIALES) {
+            vidasAnteriores++;
+        }
 
         if (nuevoNivel <= 1) {
             puntajeAnterior = 0;
